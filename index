@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Paint Touch iPad</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; background: #eee; touch-action: none; }
+        .controles { background: #333; color: white; width: 100%; padding: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        canvas { background: white; border-bottom: 2px solid #000; touch-action: none; }
+        button { padding: 8px 15px; border-radius: 5px; border: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="controles">
+        <input type="color" id="cor" value="#000000">
+        <input type="range" id="tamanho" min="1" max="30" value="5">
+        <button id="limpar" style="background: #ff4d4d; color: white;">Limpar</button>
+        <button id="borracha">Borracha</button>
+    </div>
+
+    <canvas id="tela"></canvas>
+
+    <script>
+        const canvas = document.getElementById('tela');
+        const ctx = canvas.getContext('2d');
+        const corInput = document.getElementById('cor');
+        const tamanhoInput = document.getElementById('tamanho');
+        const btnLimpar = document.getElementById('limpar');
+        const btnBorracha = document.getElementById('borracha');
+
+        // Ajusta o tamanho do canvas para a tela do iPad
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 80;
+
+        let desenhando = false;
+
+        function obterPosicao(e) {
+            // Verifica se é toque ou mouse
+            const clienteX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clienteY = e.touches ? e.touches[0].clientY : e.clientY;
+            const rect = canvas.getBoundingClientRect();
+            return { x: clienteX - rect.left, y: clienteY - rect.top };
+        }
+
+        function iniciar(e) {
+            desenhando = true;
+            const pos = obterPosicao(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            e.preventDefault(); // Impede o iPad de "rolar" a página enquanto desenha
+        }
+
+        function mover(e) {
+            if (!desenhando) return;
+            const pos = obterPosicao(e);
+            ctx.lineWidth = tamanhoInput.value;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = corInput.value;
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            e.preventDefault();
+        }
+
+        function parar() {
+            desenhando = false;
+        }
+
+        // Suporte para Mouse (PC)
+        canvas.addEventListener('mousedown', iniciar);
+        canvas.addEventListener('mousemove', mover);
+        window.addEventListener('mouseup', parar);
+
+        // Suporte para Touch (iPad/iPhone)
+        canvas.addEventListener('touchstart', iniciar, {passive: false});
+        canvas.addEventListener('touchmove', mover, {passive: false});
+        canvas.addEventListener('touchend', parar);
+
+        // Funções Extras
+        btnLimpar.onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+        btnBorracha.onclick = () => corInput.value = "#ffffff";
+    </script>
+</body>
+</html>
+      
