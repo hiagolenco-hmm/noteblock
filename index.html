@@ -2,133 +2,77 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dino Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Editor de Texto</title>
     <style>
-        body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #f7f7f7; font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; }
-        canvas { background: #fff; border-bottom: 2px solid #535353; margin-top: 50px; max-width: 100%; }
-        .score { font-size: 24px; color: #535353; margin-top: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .toolbar { background: #333; padding: 10px; border-radius: 8px 8px 0 0; width: 90%; max-width: 800px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .editor { 
+            background: white; border: 1px solid #ccc; width: 90%; max-width: 800px; min-height: 400px; 
+            padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            outline: none; font-size: 16px; line-height: 1.5;
+        }
+        button { 
+            padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; 
+            background: #555; color: white; font-weight: bold; transition: 0.3s;
+        }
+        button:hover { background: #777; }
+        .btn-save { background: #28a745; }
+        .btn-save:hover { background: #218838; }
     </style>
 </head>
 <body>
 
-    <div class="score" id="score">00000</div>
-    <canvas id="gameCanvas"></canvas>
+    <h2 style="color: #333;">📝 Web Text Editor</h2>
+
+    <div class="toolbar">
+        <button onclick="executar('bold')">B</button>
+        <button onclick="executar('italic')"><i>I</i></button>
+        <button onclick="executar('underline')"><u>U</u></button>
+        
+        <div style="flex-grow: 1;"></div> <button class="btn-save" onclick="exportar('txt')">Exportar .TXT</button>
+        <button class="btn-save" onclick="exportar('html')">Exportar .HTML</button>
+    </div>
+
+    <div id="editor" class="editor" contenteditable="true" placeholder="Comece a escrever aqui..."></div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-
-        // Configurações do jogo
-        canvas.width = 600;
-        canvas.height = 200;
-
-        let score = 0;
-        let gameSpeed = 5;
-        let isGameOver = false;
-
-        // Propriedades do Dino
-        const dino = {
-            x: 50,
-            y: 150,
-            width: 40,
-            height: 40,
-            color: '#535353',
-            dy: 0,         // Velocidade vertical
-            jumpForce: 12,
-            gravity: 0.6,
-            grounded: false
-        };
-
-        // Obstáculos
-        let obstacles = [];
-
-        function spawnObstacle() {
-            let height = 30 + Math.random() * 30;
-            obstacles.push({
-                x: canvas.width,
-                y: canvas.height - height,
-                width: 20,
-                height: height,
-                color: '#ff4d4d'
-            });
+        // Função para formatar o texto selecionado
+        function executar(comando) {
+            document.execCommand(comando, false, null);
         }
 
-        // Input: Teclado ou Toque no iPad
-        function pular() {
-            if (dino.grounded && !isGameOver) {
-                dino.dy = -dino.jumpForce;
-                dino.grounded = false;
-            }
-            if (isGameOver) restart();
-        }
+        function exportar(formato) {
+            const editor = document.getElementById('editor');
+            let conteudo = "";
+            let nomeArquivo = "meu-documento";
 
-        window.addEventListener('keydown', (e) => { if (e.code === 'Space') pular(); });
-        window.addEventListener('touchstart', pular);
-
-        function restart() {
-            score = 0;
-            obstacles = [];
-            gameSpeed = 5;
-            isGameOver = false;
-            dino.y = 150;
-            dino.dy = 0;
-            requestAnimationFrame(update);
-        }
-
-        function update() {
-            if (isGameOver) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Gravidade e Pulo
-            dino.dy += dino.gravity;
-            dino.y += dino.dy;
-
-            if (dino.y + dino.height > canvas.height) {
-                dino.y = canvas.height - dino.height;
-                dino.dy = 0;
-                dino.grounded = true;
+            if (formato === 'txt') {
+                // Pega apenas o texto, ignorando tags HTML
+                conteudo = editor.innerText;
+                nomeArquivo += ".txt";
+            } else {
+                // Pega o conteúdo com as tags (negrito, itálico, etc)
+                conteudo = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Documento Exportado</title></head>
+<body>${editor.innerHTML}</body>
+</html>`;
+                nomeArquivo += ".html";
             }
 
-            // Desenha Dino
-            ctx.fillStyle = dino.color;
-            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
-
-            // Gerencia Obstáculos
-            if (Math.random() < 0.01) spawnObstacle();
-
-            obstacles.forEach((obs, index) => {
-                obs.x -= gameSpeed;
-                ctx.fillStyle = obs.color;
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-
-                // Colisão
-                if (dino.x < obs.x + obs.width &&
-                    dino.x + dino.width > obs.x &&
-                    dino.y < obs.y + obs.height &&
-                    dino.y + dino.height > obs.y) {
-                    isGameOver = true;
-                    ctx.fillStyle = "rgba(0,0,0,0.5)";
-                    ctx.fillRect(0,0, canvas.width, canvas.height);
-                    ctx.fillStyle = "white";
-                    ctx.fillText("GAME OVER - Toque para reiniciar", 180, 100);
-                }
-
-                // Remove obstáculos fora da tela e soma score
-                if (obs.x + obs.width < 0) {
-                    obstacles.splice(index, 1);
-                    score++;
-                    scoreElement.innerText = score.toString().padStart(5, '0');
-                    if (score % 10 === 0) gameSpeed += 0.2; // Aumenta dificuldade
-                }
-            });
-
-            requestAnimationFrame(update);
+            // Cria o arquivo para download
+            const blob = new Blob([conteudo], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.href = url;
+            a.download = nomeArquivo;
+            a.click(); // Simula o clique de download
+            
+            window.URL.revokeObjectURL(url); // Limpa a memória
         }
-
-        update();
     </script>
 </body>
 </html>
