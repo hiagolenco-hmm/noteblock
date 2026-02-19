@@ -3,94 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Paint Pro iPad (Pressure)</title>
+    <title>Dino Clone</title>
     <style>
-        body { font-family: sans-serif; margin: 0; overflow: hidden; background: #222; touch-action: none; }
-        .controles { 
-            background: #333; color: white; padding: 10px; 
-            display: flex; justify-content: center; gap: 15px; 
-            align-items: center; border-bottom: 1px solid #444;
-        }
-        canvas { background: white; touch-action: none; display: block; }
-        label { font-size: 12px; }
-        button { padding: 8px 12px; border-radius: 4px; border: none; cursor: pointer; }
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #f7f7f7; font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; }
+        canvas { background: #fff; border-bottom: 2px solid #535353; margin-top: 50px; max-width: 100%; }
+        .score { font-size: 24px; color: #535353; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="controles">
-        <input type="color" id="cor" value="#000000">
-        <label>Sensibilidade: <input type="range" id="tamanhoBase" min="1" max="50" value="10"></label>
-        <button id="limpar" style="background: #ff4d4d; color: white;">Limpar</button>
-        <div id="status" style="font-size: 10px; color: #aaa;">Pressão: 0%</div>
-    </div>
-
-    <canvas id="tela"></canvas>
+    <div class="score" id="score">00000</div>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('tela');
+        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const corInput = document.getElementById('cor');
-        const tamanhoBase = document.getElementById('tamanhoBase');
-        const status = document.getElementById('status');
+        const scoreElement = document.getElementById('score');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 60;
+        // Configurações do jogo
+        canvas.width = 600;
+        canvas.height = 200;
 
-        let desenhando = false;
-        let ultimaPos = { x: 0, y: 0 };
+        let score = 0;
+        let gameSpeed = 5;
+        let isGameOver = false;
 
-        // O segredo está no 'pointerdown' e 'pointermove'
-        canvas.addEventListener('pointerdown', (e) => {
-            desenhando = true;
-            ultimaPos = obterPosicao(e);
-            e.preventDefault();
-        });
+        // Propriedades do Dino
+        const dino = {
+            x: 50,
+            y: 150,
+            width: 40,
+            height: 40,
+            color: '#535353',
+            dy: 0,         // Velocidade vertical
+            jumpForce: 12,
+            gravity: 0.6,
+            grounded: false
+        };
 
-        window.addEventListener('pointermove', (e) => {
-            if (!desenhando) return;
+        // Obstáculos
+        let obstacles = [];
 
-            const pos = obterPosicao(e);
-            
-            // Lógica de Pressão: 
-            // Se e.pressure for 0 (alguns dispositivos), definimos um padrão de 0.5
-            const pressao = e.pressure > 0 ? e.pressure : 0.5;
-            
-            // Mostra a pressão no painel para teste
-            status.innerText = `Pressão: ${Math.round(pressao * 100)}%`;
-
-            ctx.beginPath();
-            ctx.strokeStyle = corInput.value;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            // A mágica: Tamanho Base x Pressão da Caneta
-            ctx.lineWidth = tamanhoBase.value * pressao;
-
-            ctx.moveTo(ultimaPos.x, ultimaPos.y);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-
-            ultimaPos = pos;
-            e.preventDefault();
-        });
-
-        window.addEventListener('pointerup', () => {
-            desenhando = false;
-            status.innerText = "Pressão: 0%";
-        });
-
-        function obterPosicao(e) {
-            const rect = canvas.getBoundingClientRect();
-            return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
+        function spawnObstacle() {
+            let height = 30 + Math.random() * 30;
+            obstacles.push({
+                x: canvas.width,
+                y: canvas.height - height,
+                width: 20,
+                height: height,
+                color: '#ff4d4d'
+            });
         }
 
-        document.getElementById('limpar').onclick = () => {
+        // Input: Teclado ou Toque no iPad
+        function pular() {
+            if (dino.grounded && !isGameOver) {
+                dino.dy = -dino.jumpForce;
+                dino.grounded = false;
+            }
+            if (isGameOver) restart();
+        }
+
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space') pular(); });
+        window.addEventListener('touchstart', pular);
+
+        function restart() {
+            score = 0;
+            obstacles = [];
+            gameSpeed = 5;
+            isGameOver = false;
+            dino.y = 150;
+            dino.dy = 0;
+            requestAnimationFrame(update);
+        }
+
+        function update() {
+            if (isGameOver) return;
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-        };
+
+            // Gravidade e Pulo
+            dino.dy += dino.gravity;
+            dino.y += dino.dy;
+
+            if (dino.y + dino.height > canvas.height) {
+                dino.y = canvas.height - dino.height;
+                dino.dy = 0;
+                dino.grounded = true;
+            }
+
+            // Desenha Dino
+            ctx.fillStyle = dino.color;
+            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+            // Gerencia Obstáculos
+            if (Math.random() < 0.01) spawnObstacle();
+
+            obstacles.forEach((obs, index) => {
+                obs.x -= gameSpeed;
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+                // Colisão
+                if (dino.x < obs.x + obs.width &&
+                    dino.x + dino.width > obs.x &&
+                    dino.y < obs.y + obs.height &&
+                    dino.y + dino.height > obs.y) {
+                    isGameOver = true;
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(0,0, canvas.width, canvas.height);
+                    ctx.fillStyle = "white";
+                    ctx.fillText("GAME OVER - Toque para reiniciar", 180, 100);
+                }
+
+                // Remove obstáculos fora da tela e soma score
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    scoreElement.innerText = score.toString().padStart(5, '0');
+                    if (score % 10 === 0) gameSpeed += 0.2; // Aumenta dificuldade
+                }
+            });
+
+            requestAnimationFrame(update);
+        }
+
+        update();
     </script>
 </body>
 </html>
