@@ -3,76 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Editor de Texto</title>
+    <title>Gerador de HTML Online</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .toolbar { background: #333; padding: 10px; border-radius: 8px 8px 0 0; width: 90%; max-width: 800px; display: flex; gap: 10px; flex-wrap: wrap; }
-        .editor { 
-            background: white; border: 1px solid #ccc; width: 90%; max-width: 800px; min-height: 400px; 
-            padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            outline: none; font-size: 16px; line-height: 1.5;
+        body { font-family: monospace; background: #1e1e1e; color: #fff; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .header { background: #333; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Área de digitação */
+        #codigo { 
+            flex-grow: 1; width: 100%; border: none; padding: 20px; 
+            background: #1e1e1e; color: #d4d4d4; font-size: 16px; 
+            resize: none; outline: none; box-sizing: border-box;
         }
-        button { 
-            padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; 
-            background: #555; color: white; font-weight: bold; transition: 0.3s;
+
+        .btn-exportar { 
+            background: #007acc; color: white; border: none; 
+            padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;
         }
-        button:hover { background: #777; }
-        .btn-save { background: #28a745; }
-        .btn-save:hover { background: #218838; }
+        .btn-exportar:hover { background: #005f9e; }
+        
+        .instrucao { font-size: 12px; color: #888; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: #333;">📝 Web Text Editor</h2>
-
-    <div class="toolbar">
-        <button onclick="executar('bold')">B</button>
-        <button onclick="executar('italic')"><i>I</i></button>
-        <button onclick="executar('underline')"><u>U</u></button>
-        
-        <div style="flex-grow: 1;"></div> <button class="btn-save" onclick="exportar('txt')">Exportar .TXT</button>
-        <button class="btn-save" onclick="exportar('html')">Exportar .HTML</button>
+    <div class="header">
+        <div>
+            <strong>EDITOR .HTML</strong>
+            <div class="instrucao">Escreva seu código abaixo e baixe o arquivo</div>
+        </div>
+        <button class="btn-exportar" onclick="baixarHTML()">Exportar Arquivo .html</button>
     </div>
 
-    <div id="editor" class="editor" contenteditable="true" placeholder="Comece a escrever aqui..."></div>
+    <textarea id="codigo" spellcheck="false" placeholder="<html>
+<body>
+  <h1>Olá Mundo!</h1>
+</body>
+</html>"></textarea>
 
     <script>
-        // Função para formatar o texto selecionado
-        function executar(comando) {
-            document.execCommand(comando, false, null);
-        }
-
-        function exportar(formato) {
-            const editor = document.getElementById('editor');
-            let conteudo = "";
-            let nomeArquivo = "meu-documento";
-
-            if (formato === 'txt') {
-                // Pega apenas o texto, ignorando tags HTML
-                conteudo = editor.innerText;
-                nomeArquivo += ".txt";
-            } else {
-                // Pega o conteúdo com as tags (negrito, itálico, etc)
-                conteudo = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Documento Exportado</title></head>
-<body>${editor.innerHTML}</body>
-</html>`;
-                nomeArquivo += ".html";
+        function baixarHTML() {
+            const texto = document.getElementById('codigo').value;
+            
+            if (!texto.trim()) {
+                alert("Escreva algum código antes de exportar!");
+                return;
             }
 
-            // Cria o arquivo para download
-            const blob = new Blob([conteudo], { type: 'text/plain' });
+            // Criando o arquivo blob como HTML
+            const blob = new Blob([texto], { type: 'text/html' });
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
             
-            a.href = url;
-            a.download = nomeArquivo;
-            a.click(); // Simula o clique de download
+            // Criando o link de download
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = "projeto.html"; // Nome do arquivo que será baixado
             
-            window.URL.revokeObjectURL(url); // Limpa a memória
+            // Acionando o download
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpeza
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
         }
+
+        // Atalho: Salvar com Ctrl+S ou Cmd+S
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                baixarHTML();
+            }
+        });
     </script>
 </body>
 </html>
