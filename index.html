@@ -3,77 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de HTML Online</title>
+    <title>Notas - Outro Nível</title>
+    
+    <link rel="icon" type="image/png" href="favicon-notas.png">
+    <link rel="apple-touch-icon" href="favicon-notas.png">
+
     <style>
-        body { font-family: monospace; background: #1e1e1e; color: #fff; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        .header { background: #333; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* Área de digitação */
-        #codigo { 
-            flex-grow: 1; width: 100%; border: none; padding: 20px; 
-            background: #1e1e1e; color: #d4d4d4; font-size: 16px; 
-            resize: none; outline: none; box-sizing: border-box;
+        :root {
+            --primary: #6200ee;
+            --bg: #f4f7f6;
+            --text: #333;
+            --border: #ddd;
         }
 
-        .btn-exportar { 
-            background: #007acc; color: white; border: none; 
-            padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden; /* Evita scroll na página toda */
         }
-        .btn-exportar:hover { background: #005f9e; }
-        
-        .instrucao { font-size: 12px; color: #888; margin-top: 5px; }
+
+        .container {
+            width: 95%;
+            max-width: 900px;
+            background: white;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Header com Abas */
+        .tabs-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+            flex-shrink: 0;
+        }
+
+        /* Esconde a barra de scroll das abas mas mantém funcional */
+        .tabs-header::-webkit-scrollbar { display: none; }
+
+        .tab-wrapper {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .tab-btn {
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .delete-tab {
+            font-size: 12px;
+            color: #ccc;
+            cursor: pointer;
+            margin-left: -5px;
+            margin-right: 10px;
+            transition: 0.2s;
+        }
+        .delete-tab:hover { color: #e74c3c; }
+
+        .add-tab-btn {
+            background: #eee;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            flex-shrink: 0;
+            transition: 0.2s;
+        }
+
+        /* Área do Bloco de Notas */
+        .notepad-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Importante para o flexbox permitir scroll interno */
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--text);
+            resize: none;
+            padding: 10px;
+            font-family: 'Segoe UI', sans-serif;
+            background: transparent;
+            box-sizing: border-box;
+        }
+
+        .status-bar {
+            font-size: 12px;
+            color: #aaa;
+            text-align: right;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div>
-            <strong>EDITOR .HTML</strong>
-            <div class="instrucao">Escreva seu código abaixo e baixe o arquivo</div>
-        </div>
-        <button class="btn-exportar" onclick="baixarHTML()">Exportar Arquivo .html</button>
+<div class="container">
+    <div class="tabs-header" id="tabsHeader"></div>
+
+    <div class="notepad-area">
+        <textarea id="noteInput" placeholder="Comece a escrever suas ideias aqui..." oninput="autoSave()"></textarea>
+        <div class="status-bar" id="statusBar">Salvo automaticamente</div>
     </div>
+</div>
 
-    <textarea id="codigo" spellcheck="false" placeholder="<html>
-<body>
-  <h1>Olá Mundo!</h1>
-</body>
-</html>"></textarea>
+<script>
+    // Banco de dados: { "Aba": "Texto" }
+    let db = JSON.parse(localStorage.getItem('userNotes')) || { "Geral": "" };
+    let currentTab = Object.keys(db)[0] || "Geral";
 
-    <script>
-        function baixarHTML() {
-            const texto = document.getElementById('codigo').value;
-            
-            if (!texto.trim()) {
-                alert("Escreva algum código antes de exportar!");
-                return;
+    const textarea = document.getElementById('noteInput');
+
+    function save() {
+        localStorage.setItem('userNotes', JSON.stringify(db));
+    }
+
+    function autoSave() {
+        db[currentTab] = textarea.value;
+        save();
+        showStatus("Salvando...");
+        clearTimeout(window.statusTimeout);
+        window.statusTimeout = setTimeout(() => showStatus("Salvo"), 800);
+    }
+
+    function showStatus(text) {
+        document.getElementById('statusBar').innerText = text;
+    }
+
+    function createTab() {
+        const name = prompt("Nome da nova categoria (ex: Roteiros, Ideias):");
+        if (name && name.trim() !== "") {
+            if (!db[name]) {
+                db[name] = "";
+                currentTab = name;
+                save();
+                render();
+            } else {
+                alert("Essa categoria já existe!");
             }
-
-            // Criando o arquivo blob como HTML
-            const blob = new Blob([texto], { type: 'text/html' });
-            const url = window.URL.createObjectURL(blob);
-            
-            // Criando o link de download
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "projeto.html"; // Nome do arquivo que será baixado
-            
-            // Acionando o download
-            document.body.appendChild(link);
-            link.click();
-            
-            // Limpeza
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
         }
+    }
 
-        // Atalho: Salvar com Ctrl+S ou Cmd+S
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                baixarHTML();
+    function deleteTab(name, e) {
+        e.stopPropagation();
+        if (confirm(`Excluir a categoria "${name}" e tudo o que está escrito nela?`)) {
+            delete db[name];
+            const abas = Object.keys(db);
+            if (abas.length === 0) {
+                db["Geral"] = "";
+                currentTab = "Geral";
+            } else {
+                currentTab = abas[0];
             }
+            save();
+            render();
+        }
+    }
+
+    function switchTab(name) {
+        currentTab = name;
+        render();
+    }
+
+    function render() {
+        const tabsHeader = document.getElementById('tabsHeader');
+        tabsHeader.innerHTML = '';
+
+        Object.keys(db).forEach(tabName => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tab-wrapper';
+            
+            const btn = document.createElement('button');
+            btn.className = `tab-btn ${tabName === currentTab ? 'active' : ''}`;
+            btn.innerText = tabName;
+            btn.onclick = () => switchTab(tabName);
+
+            const del = document.createElement('span');
+            del.className = 'delete-tab';
+            del.innerText = '✕';
+            del.onclick = (e) => deleteTab(tabName, e);
+
+            wrapper.appendChild(btn);
+            wrapper.appendChild(del);
+            tabsHeader.appendChild(wrapper);
         });
-    </script>
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-tab-btn';
+        addBtn.innerText = '+';
+        addBtn.onclick = createTab;
+        tabsHeader.appendChild(addBtn);
+
+        // Carregar o texto da aba atual e focar
+        textarea.value = db[currentTab] || "";
+        textarea.focus();
+    }
+
+    // Inicializar
+    render();
+</script>
+
 </body>
 </html>
